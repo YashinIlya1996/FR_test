@@ -5,8 +5,9 @@ from .servises import check_valid_number
 
 
 class MailingSerializer(serializers.ModelSerializer):
-    filter_operator_codes = serializers.SlugRelatedField(slug_field="code", read_only=True, many=True)
-    filter_client_tags = serializers.SlugRelatedField(slug_field="tag", read_only=True, many=True)
+    filter_operator_codes = serializers.SlugRelatedField(slug_field="code", queryset=OperatorCode.objects.all(),
+                                                         many=True)
+    filter_client_tags = serializers.SlugRelatedField(slug_field="tag", queryset=ClientTag.objects.all(), many=True)
 
     class Meta:
         model = Mailing
@@ -21,9 +22,10 @@ class ClientSerializer(serializers.ModelSerializer):
         model = Client
         fields = '__all__'
 
-    def create(self, validated_data):
-        check_valid_number(str(validated_data.get("phone_number")))
-        return super().create(validated_data)
+    def is_valid(self, raise_exception=True):
+        if number := self.initial_data.get("phone_number"):
+            check_valid_number(str(number))
+        return super().is_valid(raise_exception=True)
 
 
 class MessageSerializer(serializers.ModelSerializer):

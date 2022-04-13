@@ -2,6 +2,8 @@ from pathlib import Path
 import json
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+import rest_framework.pagination
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 with open(BASE_DIR / 'secrets.json', 'rt') as f:
@@ -24,9 +26,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'drf_yasg',
 
     'mailing_service',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 10,
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -102,3 +111,5 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
