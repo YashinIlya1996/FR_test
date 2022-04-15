@@ -4,6 +4,23 @@ from .models import Mailing, Client, Message, ClientTag, OperatorCode
 from .servises import check_valid_number, create_related_if_not_exist
 
 
+class MessageSerializer(serializers.ModelSerializer):
+    """ It's using with detail mailing statistic"""
+    response_code = serializers.ReadOnlyField(
+        source='get_response_code_display',
+        read_only=True
+    )
+    phone_number = serializers.SlugRelatedField(
+        source='client',
+        slug_field="phone_number",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Message
+        fields = ("id", "response_code", "phone_number")
+
+
 class MailingSerializer(serializers.ModelSerializer):
     """ Serializer to post/update Mailing """
     filter_operator_codes = serializers.SlugRelatedField(
@@ -37,7 +54,8 @@ class MailingGeneralStatisticSerializer(MailingSerializer):
 
 
 class MailingDetailStatisticSerializer(MailingGeneralStatisticSerializer):
-    numbers = serializers.ReadOnlyField()
+    """ Serializer to represent full statistic in retrieve get view"""
+    messages = MessageSerializer(many=True)
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -67,9 +85,3 @@ class ClientSerializer(serializers.ModelSerializer):
             check_valid_number(str(number))
         create_related_if_not_exist(self.initial_data)
         return super().is_valid(raise_exception=False)
-
-
-class MessageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Message
-        fields = '__all__'

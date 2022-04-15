@@ -45,7 +45,8 @@ def get_clients_from_mailing(mailing: Mailing) -> QuerySet[Client]:
         ).distinct().select_related('tag', 'operator_code')
 
 
-def annotate_mailing_with_message_counters():
+def annotate_mailing_with_message_counters() -> QuerySet[Mailing]:
+    """ Used with short-statistic mailing serializer """
     return Mailing.objects.annotate(
         total_message_count=Count('q_messages'),
         success_message_count=Count('q_messages', filter=Q(q_messages__response_code=Message.SUCCESS)),
