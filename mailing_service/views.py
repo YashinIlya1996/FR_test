@@ -5,8 +5,9 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Mailing, Client, Message
-from .serializers import MailingSerializer, ClientSerializer
+from .models import Mailing, Client, Message, ClientTag, OperatorCode
+from .serializers import MailingSerializer
+from .serializers import ClientSerializer
 from .servises import check_valid_number
 
 
@@ -77,6 +78,11 @@ class ClientUDView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ClientSerializer
 
 
-class MailingCreateListView(generics.ListCreateAPIView):
+class MailingListCreateView(generics.ListCreateAPIView):
+    queryset = Mailing.objects.all()
+    serializer_class = MailingSerializer
+
+
+class MailingUDView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Mailing.objects.all()
     serializer_class = MailingSerializer
