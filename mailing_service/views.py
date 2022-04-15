@@ -1,14 +1,10 @@
-from django.shortcuts import get_object_or_404
-
 from rest_framework import generics
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from django.db.models import Count, Q
 
-from .models import Mailing, Client, Message, ClientTag, OperatorCode
-from .serializers import MailingSerializer
+from .models import Mailing, Client, Message
+from .serializers import MailingSerializer, MailingGeneralStatisticSerializer, MailingDetailStatisticSerializer
 from .serializers import ClientSerializer
-from .servises import check_valid_number
+from .servises import annotate_mailing_with_message_counters
 
 
 #
@@ -79,10 +75,30 @@ class ClientUDView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class MailingListCreateView(generics.ListCreateAPIView):
-    queryset = Mailing.objects.all()
-    serializer_class = MailingSerializer
+    def get_queryset(self):
+        if self.request.method == 'GET':
+            return annotate_mailing_with_message_counters()
+        else:
+            return Mailing.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return MailingGeneralStatisticSerializer
+        else:
+            return MailingSerializer
 
 
 class MailingUDView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Mailing.objects.all()
-    serializer_class = MailingSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return MailingDetailStatisticSerializer
+        else:
+            return MailingGeneralStatisticSerializer
+
+    def get_queryset(self):
+        if self.request.method == 'GET':
+            return annotate_mailing_with_message_counters()
+        else:
+            return Mailing.objects.all()

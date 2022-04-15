@@ -5,6 +5,7 @@ from .servises import check_valid_number, create_related_if_not_exist
 
 
 class MailingSerializer(serializers.ModelSerializer):
+    """ Serializer to post/update Mailing """
     filter_operator_codes = serializers.SlugRelatedField(
         slug_field="code",
         allow_null=True,
@@ -27,10 +28,23 @@ class MailingSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class MailingGeneralStatisticSerializer(MailingSerializer):
+    """ Serializer to represent short statistic in list """
+    total_message_count = serializers.IntegerField()
+    success_message_count = serializers.IntegerField()
+    fail_message_count = serializers.IntegerField()
+    planned_message_count = serializers.IntegerField()
+
+
+class MailingDetailStatisticSerializer(MailingGeneralStatisticSerializer):
+    numbers = serializers.ReadOnlyField()
+
+
 class ClientSerializer(serializers.ModelSerializer):
     """ Can representation client with related fields tag and operator_code.
         Required field is only phone_number to create or update client,
-        if related fields are not passed, they wil be set to null"""
+        if related fields are not passed, they wil be set to null.
+        If related fields does not exist, they will be created"""
     operator_code = serializers.SlugRelatedField(
         slug_field="code",
         allow_null=True,

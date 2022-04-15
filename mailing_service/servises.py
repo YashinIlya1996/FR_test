@@ -4,10 +4,9 @@ from celery import group
 import requests
 
 from django.conf import settings
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet, Q, Count
 from rest_framework.serializers import ValidationError
-from .models import ClientTag, OperatorCode, Mailing, Client, Message
-
+from .models import Mailing, Client, Message, ClientTag, OperatorCode
 
 def check_valid_number(number: str):
     """ Response status 400 with error messages if phone_number not valid """
@@ -35,12 +34,23 @@ def get_clients_from_mailing(mailing: Mailing) -> QuerySet[Client]:
     codes_list = mailing.filter_operator_codes.values_list('code', flat=True)
     tags_list = mailing.filter_client_tags.values_list('tag', flat=True)
     if not (codes_list or tags_list):
-        return Client.objects.all()
+        if settings.EMPTY_FILTERS_IN_MAILING_TO_ALL_CLIENTS:
+            return Client.objects.all()
+        else:
+            return Client.objects.none()
     else:
         return Client.objects.filter(
             Q(operator_code__code__in=codes_list) |
             Q(tag__tag__in=tags_list)
         ).distinct().select_related('tag', 'operator_code')
+
+
+def annotate_mailing_with_message_counters():
+    return Mailing.objects.annotate(
+        total_message_count=Count('q_messages'),
+        success_message_count=Count('q_messages', filter=Q(q_messages__response_code=Message.SUCCESS)),
+        fail_message_count=Count('q_messages', filter=Q(q_messages__response_code=Message.FAULT)),
+        planned_message_count=Count('q_messages', filter=Q(q_messages__response_code=Message.PLANNED)))
 
 
 def init_start_mailing(mailing_id: int):

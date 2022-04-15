@@ -2,7 +2,6 @@ from django.db import models
 from pytz import all_timezones
 from datetime import time
 
-
 class OperatorCode(models.Model):
     code = models.IntegerField(unique=True)
 
@@ -35,6 +34,11 @@ class Mailing(models.Model):
                f"Codes: {list(self.filter_operator_codes.values_list('code', flat=True))}, " \
                f"Tags: {list(self.filter_client_tags.values_list('tag', flat=True))}"
 
+    @property
+    def numbers(self):
+        from .servises import get_clients_from_mailing
+        return get_clients_from_mailing(self).values_list('phone_number', flat=True)
+
 
 class Client(models.Model):
     # tuple to choices in client_instance.timezone
@@ -64,9 +68,10 @@ class Message(models.Model):
 
     send_date_time = models.DateTimeField(auto_now_add=True)
     response_code = models.IntegerField(default=PLANNED, choices=STATUS_CHOICES)
-    mailing = models.ForeignKey(Mailing, on_delete=models.CASCADE, related_name='messages')
+    mailing = models.ForeignKey(Mailing, on_delete=models.CASCADE, related_name='messages', related_query_name='q_messages')
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='clients')
 
     def __str__(self):
         return f"Status: {self.get_response_code_display()}, to {self.client.phone_number}, " \
                f"send at {self.send_date_time}"
+

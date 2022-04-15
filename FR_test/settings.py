@@ -122,4 +122,7 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
+# mailing settings
+EMPTY_FILTERS_IN_MAILING_TO_ALL_CLIENTS = False
+
 
