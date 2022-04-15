@@ -53,11 +53,20 @@ class Client(models.Model):
 
 
 class Message(models.Model):
-    # SUCCESS = 200
-    # FAULT = 400
-    # PLANNED = 100
+    SUCCESS = 200
+    FAULT = 400
+    PLANNED = 100
+    STATUS_CHOICES = [
+        (SUCCESS, 'Success'),
+        (FAULT, 'Fault'),
+        (PLANNED, 'Planned')
+    ]
 
     send_date_time = models.DateTimeField(auto_now_add=True)
-    response_code = models.IntegerField(default=0)
+    response_code = models.IntegerField(default=PLANNED, choices=STATUS_CHOICES)
     mailing = models.ForeignKey(Mailing, on_delete=models.CASCADE, related_name='messages')
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='clients')
+
+    def __str__(self):
+        return f"Status: {self.get_response_code_display()}, to {self.client.phone_number}, " \
+               f"send at {self.send_date_time}"

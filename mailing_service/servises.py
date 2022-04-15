@@ -1,11 +1,12 @@
 import random
+import json
 from celery import group
 import requests
 
 from django.conf import settings
 from django.db.models import QuerySet, Q
 from rest_framework.serializers import ValidationError
-from .models import ClientTag, OperatorCode, Mailing, Client
+from .models import ClientTag, OperatorCode, Mailing, Client, Message
 
 
 def check_valid_number(number: str):
@@ -44,11 +45,16 @@ def get_clients_from_mailing(mailing: Mailing) -> QuerySet[Client]:
 
 def init_start_mailing(mailing_id: int):
     mailing = Mailing.objects.get(pk=mailing_id)
-    numbers = get_clients_from_mailing(mailing).values_list('phone_number', flat=True)
+    clients_info = get_clients_from_mailing(mailing).values_list('phone_number', 'pk')
+    for phone_number, pk in clients_info:
+        create_message(phone_number, mailing_id, pk, mailing.message)  # TODO realize through celery group
 
 
-def send_message(phone_number: int):
-    pass
+def create_message(phone_number: int, mailing_id: int, client_id, text: str):
+    new_message = Message.objects.create(mailing_id=mailing_id, client_id=client_id)
+    response_code = send_request_to_external_api(new_message.pk, phone_number, text)
+    new_message.response_code = response_code
+    new_message.save()
 
 
 def send_request_to_external_api(message_id: int, phone_number: int, text: str):
@@ -61,5 +67,5 @@ def send_request_to_external_api(message_id: int, phone_number: int, text: str):
         'text': text
     }
 
-    response = requests.post(url=url, data=data, headers=headers)
+    response = requests.post(url=url, data=json.dumps(data), headers=headers)
     return response.status_code
