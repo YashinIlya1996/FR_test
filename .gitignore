@@ -143,3 +143,4 @@ cython_debug/
 /media/
 !/mailing_service/migrations/
 /mailing_service/migrations/
+/dump.rdb

@@ -68,6 +68,7 @@ class Command(BaseCommand):
 
     def create_mailings(self, count=50):
         Mailing.objects.all().delete()
+        Message.objects.all().delete()
         MIN_START_DATE = dt.datetime.now() + dt.timedelta(days=1)
         MAX_START_DATE = MIN_START_DATE + dt.timedelta(days=90)
         ALLOWED_CHARS_IN_MESSAGE = ascii_lowercase + " " * 10

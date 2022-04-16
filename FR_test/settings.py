@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
@@ -95,7 +96,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
+TIME_ZONE = os.environ.get('TZ') or 'Europe/Moscow'
 
 USE_I18N = True
 
@@ -123,6 +125,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 # mailing settings
-EMPTY_FILTERS_IN_MAILING_TO_ALL_CLIENTS = False
+EMPTY_FILTERS_IN_MAILING_TO_ALL_CLIENTS = True
 
 
