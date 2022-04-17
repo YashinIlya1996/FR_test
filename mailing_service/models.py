@@ -1,6 +1,6 @@
 from django.db import models
 from pytz import all_timezones
-from datetime import time
+from datetime import time, datetime
 
 
 class OperatorCode(models.Model):
@@ -25,6 +25,7 @@ class Mailing(models.Model):
     message = models.TextField()
     filter_operator_codes = models.ManyToManyField(OperatorCode, related_name='mailings', blank=True)
     filter_client_tags = models.ManyToManyField(ClientTag, related_name='mailings', blank=True)
+    send_all_message_task_id = models.CharField(max_length=36, null=True, blank=True)
 
     class Meta:
         ordering = ['start_date', 'start_time', 'stop_date', 'stop_time']
@@ -34,6 +35,14 @@ class Mailing(models.Model):
                f"stop at {self.stop_date} {self.stop_time}. " \
                f"Codes: {list(self.filter_operator_codes.values_list('code', flat=True))}, " \
                f"Tags: {list(self.filter_client_tags.values_list('tag', flat=True))}"
+
+    @property
+    def start_datetime(self):
+        return datetime.combine(self.start_date, self.start_time)
+
+    @property
+    def stop_datetime(self):
+        return datetime.combine(self.stop_date, self.stop_time)
 
 
 class Client(models.Model):

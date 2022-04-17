@@ -15,10 +15,10 @@ from mailing_service.servises import create_messages_without_sending
 #         create_messages_without_sending(mailing.pk)
 
 
-@receiver(pre_save, sender=Mailing)
-def change_send_messages_task(sender, **kwargs):
-    pk = kwargs["instance"].pk
-    mailing_from_db = Mailing.objects.get(pk=pk)
-    dt = mailing_from_db.stop_date
-    print(kwargs)
+# @receiver(pre_save, sender=Mailing)
+# def change_send_messages_task(sender, **kwargs):
+#     pk = kwargs["instance"].pk
+#     mailing_from_db = Mailing.objects.get(pk=pk)
+#     dt = mailing_from_db.stop_date
+#     print(kwargs)
 
