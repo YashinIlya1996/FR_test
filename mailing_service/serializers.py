@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .models import Mailing, Client, Message, ClientTag, OperatorCode
 from .servises import check_valid_number, create_related_if_not_exist
@@ -42,7 +43,17 @@ class MailingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mailing
-        fields = '__all__'
+        # fields = '__all__'
+        fields = [
+            'id',
+            'start_date',
+            'start_time',
+            'stop_date',
+            'stop_time',
+            'message',
+            'filter_operator_codes',
+            'filter_client_tags',
+        ]
 
 
 class MailingGeneralStatisticSerializer(MailingSerializer):
@@ -52,10 +63,23 @@ class MailingGeneralStatisticSerializer(MailingSerializer):
     fail_message_count = serializers.IntegerField()
     planned_message_count = serializers.IntegerField()
 
+    class Meta:
+        model = MailingSerializer.Meta.model
+        fields = MailingSerializer.Meta.fields + [
+            'total_message_count',
+            'success_message_count',
+            'fail_message_count',
+            'planned_message_count',
+        ]
+
 
 class MailingDetailStatisticSerializer(MailingGeneralStatisticSerializer):
     """ Serializer to represent full statistic in retrieve get view """
     messages = MessageSerializer(many=True)
+
+    class Meta:
+        model = MailingGeneralStatisticSerializer.Meta.model
+        fields = MailingGeneralStatisticSerializer.Meta.fields + ['messages']
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -84,4 +108,4 @@ class ClientSerializer(serializers.ModelSerializer):
         if number := self.initial_data.get("phone_number"):
             check_valid_number(str(number))
         create_related_if_not_exist(self.initial_data)
-        return super().is_valid(raise_exception=False)
+        return super().is_valid(raise_exception=True)

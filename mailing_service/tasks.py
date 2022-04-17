@@ -24,4 +24,4 @@ def celery_send_all_planned_messages(mailing_id: int):
     group_res = group(
         celery_send_planned_message.s(pk) for pk in planned_messages
     ).apply_async()
-    print(group_res)
+    return group_res.id

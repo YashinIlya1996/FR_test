@@ -41,7 +41,7 @@ class MailingListCreateView(generics.ListCreateAPIView):
                 args=[response.data.get("id")],
                 expires=stop_datetime,
                 link=celery_send_all_planned_messages.s()
-            )  # TODO Celery через link
+            )
         return response
 
 
@@ -52,7 +52,7 @@ class MailingUDView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method == 'GET':
             return MailingDetailStatisticSerializer
         else:
-            return MailingGeneralStatisticSerializer
+            return MailingSerializer
 
     def get_queryset(self):
         if self.request.method == 'GET':
