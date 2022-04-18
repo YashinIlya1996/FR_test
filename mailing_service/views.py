@@ -1,4 +1,5 @@
 from rest_framework import generics
+from django.template.response import SimpleTemplateResponse
 
 from .models import Mailing, Client
 from .serializers import MailingSerializer, MailingGeneralStatisticSerializer, MailingDetailStatisticSerializer
@@ -79,3 +80,7 @@ class MailingUDView(generics.RetrieveUpdateDestroyAPIView):
         update_mailing(mailing_id, old_filter_client_tags, old_filter_operator_codes, old_mailing, updated_mailing,
                        response)
         return response
+
+
+def about(request):
+    return SimpleTemplateResponse(template='about.html')

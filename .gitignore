@@ -144,3 +144,4 @@ cython_debug/
 !/mailing_service/migrations/
 /mailing_service/migrations/
 /dump.rdb
+/README.MD
