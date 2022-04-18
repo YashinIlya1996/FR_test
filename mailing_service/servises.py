@@ -26,7 +26,7 @@ def check_valid_number(number: str):
 
 def create_related_if_not_exist(initial_data: dict) -> None:
     """ Create non-existent tag and operator_code with passed data
-        before update/create related models. """
+        before update/create client's models. """
     if tag_data := initial_data.get("tag"):
         ClientTag.objects.get_or_create(tag=tag_data)
     if operator_code_data := initial_data.get("operator_code"):
@@ -59,7 +59,7 @@ def get_clients_from_mailing(mailing: Mailing) -> QuerySet[Client]:
 
 
 def annotate_mailing_with_message_counters() -> QuerySet[Mailing]:
-    """ Used with short-statistic mailing serializer """
+    """ Used with short-statistic mailing serializer as queryset param """
     return Mailing.objects.annotate(
         total_message_count=Count('q_messages'),
         success_message_count=Count('q_messages', filter=Q(q_messages__status=Message.SUCCESS)),
@@ -72,13 +72,13 @@ def send_planned_message(message_id: int):
         Uses with celery task. """
     message = Message.objects.select_related('client', 'mailing').get(pk=message_id)
     text, phone_number = message.mailing.message, message.client.phone_number
-    print(text)
-    # status = send_request_to_external_api(message_id, phone_number, text)
-    status = fake_request()  # to test
+    status = send_request_to_external_api(message_id, phone_number, text)
+    # status = fake_request()  # to test
     message.status = status
+    message.send_date_time = dt.datetime.now().astimezone(timezone.get_current_timezone())
     message.save()
     if status != Message.SUCCESS:
-        raise Exception("Не успешный результат")
+        raise Exception("Sending fault")
 
 
 def get_planned_messages(mailing_id: int) -> list[int]:
@@ -88,19 +88,23 @@ def get_planned_messages(mailing_id: int) -> list[int]:
         status=Message.PLANNED).values_list('pk', flat=True))
 
 
-def create_messages_without_sending(mailing_id: int) -> None:
+def create_messages_without_sending(mailing_id: int, refresh_success=True) -> None:
     """ Creates message objects to clients that match the filters
         specified in the mailing with pk=mailing_id.
         Called when creating a mailing list the api """
     mailing = Mailing.objects.get(pk=mailing_id)
-    clients_info = get_clients_from_mailing(mailing).values_list('phone_number', 'pk')
+    clients_info = get_clients_from_mailing(mailing).values_list('pk', flat=True)
     messages = []
-    for number, client_id in clients_info:
-        messages.append(Message(
-            status=Message.PLANNED,
-            mailing_id=mailing_id,
-            client_id=client_id
-        ))
+    if not refresh_success:
+        success_messages_clients_id = set(
+            mailing.messages.filter(status=Message.SUCCESS).values_list('client_id', flat=True))
+    for client_id in clients_info:
+        if refresh_success or (not refresh_success and client_id not in success_messages_clients_id):
+            messages.append(Message(
+                status=Message.PLANNED,
+                mailing_id=mailing_id,
+                client_id=client_id
+            ))
     Message.objects.bulk_create(messages)
 
 
@@ -114,9 +118,7 @@ def send_request_to_external_api(message_id: int, phone_number: int, text: str):
         'phone': phone_number,
         'text': text
     }
-
     response = requests.post(url=url, data=json.dumps(data), headers=headers)
-    time.sleep(10)
     return response.status_code
 
 
@@ -128,7 +130,10 @@ def fake_request():
     return random.choice((200, 400, 400))
 
 
-def start_new_mailing(response):
+def start_new_mailing(response, refresh_success=True):
+    """ Start mailing process to clients.
+        If refresh_success is True, new messages to clients, who already receive message from this mailing,
+        wil be resent."""
     from mailing_service.tasks import celery_send_all_planned_messages, celery_create_messages_without_sending
 
     stop_datetime = dt.datetime.fromisoformat(f"{response.data['stop_date']} {response.data['stop_time']}")
@@ -136,7 +141,7 @@ def start_new_mailing(response):
     start_datetime = start_datetime.astimezone(timezone.get_current_timezone())
     if stop_datetime > dt.datetime.now():
         res = celery_create_messages_without_sending.apply_async(
-            args=[response.data.get("id")],
+            args=[response.data.get("id"), refresh_success],
             expires=stop_datetime,
             link=celery_send_all_planned_messages.signature(options={
                 'eta': start_datetime
@@ -148,6 +153,7 @@ def start_new_mailing(response):
 
 
 def _datetimes_changed(old_mailing: Mailing, updated_mailing: Mailing) -> bool:
+    """ Return True if mailing's datetime fields were changed by PUT/PATCH methods"""
     old_start_datetime = old_mailing.start_datetime
     updated_start_datetime = updated_mailing.start_datetime
     old_stop_datetime = old_mailing.stop_datetime
@@ -156,15 +162,18 @@ def _datetimes_changed(old_mailing: Mailing, updated_mailing: Mailing) -> bool:
 
 
 def _message_changed(old_mailing: Mailing, updated_mailing: Mailing) -> bool:
+    """ Return True if mailing's message field was changed by PUT/PATCH methods"""
     return not (old_mailing.message == updated_mailing.message)
 
 
 def _filters_changed(old_filter_client_tags,
                      old_filter_operator_codes,
                      updated_mailing: Mailing, ) -> bool:
+    """ Return True if mailing's filter fields were changed by PUT/PATCH methods"""
     updated_filter_client_tags = set(updated_mailing.filter_client_tags.values_list('tag', flat=True))
     updated_filter_operator_codes = set(updated_mailing.filter_operator_codes.values_list('code', flat=True))
-    return not (old_filter_operator_codes == updated_filter_operator_codes and old_filter_client_tags == updated_filter_client_tags)
+    return not (
+            old_filter_operator_codes == updated_filter_operator_codes and old_filter_client_tags == updated_filter_client_tags)
 
 
 def _refresh_failed_tasks(mailing_id):
@@ -179,21 +188,36 @@ def _remove_all_planned_messages(mailing_id):
 
 def _stop_previous_mailing(mailing_id):
     """ Used when existing mailing was changed"""
-    res = AsyncResult(Mailing.objects.get(pk=mailing_id).send_all_message_task_id)
-    print(repr(res))
-    group = res.children[0].children[0]
-    print(repr(group))
-    group.revoke(terminate=True)
+    try:
+        res = AsyncResult(Mailing.objects.get(pk=mailing_id).send_all_message_task_id)
+        sending_all_task = res.children[0]
+        if res.ready() and sending_all_task.ready():
+            group = res.children[0].children[0]
+            group.revoke(terminate=True)
+        else:
+            sending_all_task.revoke()
+    except (ValueError, IndexError):  # If the creation of the mailing did not lead to the sending of messages
+        pass
 
 
 def update_mailing(mailing_id: int,
                    old_filter_client_tags: set[str],
                    old_filter_operator_codes: set[int],
                    old_mailing: Mailing,
-                   updated_mailing: Mailing) -> None:
+                   updated_mailing: Mailing,
+                   response) -> None:
     filters_changed = _filters_changed(old_filter_client_tags,
                                        old_filter_operator_codes,
                                        updated_mailing)
     message_changed = _message_changed(old_mailing, updated_mailing)
     datetimes_changed = _datetimes_changed(old_mailing, updated_mailing)
-    _stop_previous_mailing(mailing_id)
+    if message_changed or filters_changed or datetimes_changed:
+        _stop_previous_mailing(mailing_id)
+    if message_changed:
+        _refresh_failed_tasks(mailing_id)
+        _remove_all_planned_messages(mailing_id)
+        start_new_mailing(response, refresh_success=True)  # Explicit is better than implicit
+    elif datetimes_changed or filters_changed:
+        _refresh_failed_tasks(mailing_id)
+        _remove_all_planned_messages(mailing_id)
+        start_new_mailing(response, refresh_success=False)

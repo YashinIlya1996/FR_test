@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from .models import Mailing, Client, Message, ClientTag, OperatorCode
 from .servises import check_valid_number, create_related_if_not_exist
@@ -19,7 +18,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ("id", "status", "phone_number")
+        fields = ("id", "send_date_time", "status", "phone_number")
 
 
 class MailingSerializer(serializers.ModelSerializer):
@@ -43,7 +42,6 @@ class MailingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mailing
-        # fields = '__all__'
         fields = [
             'id',
             'start_date',

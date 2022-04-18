@@ -10,16 +10,17 @@ from .servises import (
 
 
 class BaseTaskWithRetries(Task):
+    """ Settings to retry failed messages sending """
     autoretry_for = (Exception,)
     max_retries = None
     retry_backoff = 5
-    retry_backoff_max = 10
+    retry_backoff_max = 600
     retry_jitter = True
 
 
 @app.task
-def celery_create_messages_without_sending(mailing_id: int):
-    create_messages_without_sending(mailing_id)
+def celery_create_messages_without_sending(mailing_id: int, refresh_success=True):
+    create_messages_without_sending(mailing_id, refresh_success)
     return mailing_id
 
 
@@ -32,6 +33,4 @@ def celery_send_planned_message(self, message_id: int):
 def celery_send_all_planned_messages(self, mailing_id: int):
     planned_messages = get_planned_messages(mailing_id)
     expires = get_expires_seconds(mailing_id)
-    group_res = group(
-        [celery_send_planned_message.s(pk) for pk in planned_messages], expires=expires)()
-    return group_res.id
+    group([celery_send_planned_message.s(pk) for pk in planned_messages], expires=expires)()

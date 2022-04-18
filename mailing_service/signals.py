@@ -1,24 +1,17 @@
 """ import it in app.ready to register callback functions """
 
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
 from mailing_service.models import Mailing
-from mailing_service.servises import create_messages_without_sending
+from mailing_service.servises import _stop_previous_mailing
 
 
-# @receiver(post_save, sender=Mailing)
-# def prepare_messages(sender, **kwargs):
-#     print(kwargs)
-#     if kwargs.get("created"):
-#         mailing = kwargs.get("instance")
-#         create_messages_without_sending(mailing.pk)
+@receiver(signal=pre_delete, sender=Mailing)
+def delete_stop_mailing_hook(sender, **kwargs):
+    instance = kwargs.get("instance")
+    if instance and instance.pk is not None:
+        _stop_previous_mailing(instance.pk)
 
 
-# @receiver(pre_save, sender=Mailing)
-# def change_send_messages_task(sender, **kwargs):
-#     pk = kwargs["instance"].pk
-#     mailing_from_db = Mailing.objects.get(pk=pk)
-#     dt = mailing_from_db.stop_date
-#     print(kwargs)
 
