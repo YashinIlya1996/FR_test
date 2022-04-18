@@ -2,20 +2,20 @@ from pathlib import Path
 import json
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 with open(BASE_DIR / 'secrets.json', 'rt') as f:
     secrets = json.load(f)
-    SECRET_KEY = secrets["SECRET_KEY"]
-    API_TOKEN = secrets["API_TOKEN"]
 
+SECRET_KEY = secrets["SECRET_KEY"]
+API_TOKEN = secrets["API_TOKEN"]
 
-DEBUG = True
+try:
+    from .local_settings import *
+except ImportError:
+    from .prod_settings import *
 
-ALLOWED_HOSTS = []
-
+STATIC_URL = 'static/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,11 +31,6 @@ INSTALLED_APPS = [
     'drf_yasg',
     'django_extensions',
 ]
-
-REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 5,
-}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -68,17 +63,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'FR_test.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -103,14 +87,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-STATIC_URL = 'static/'
-STATIC_DIR = BASE_DIR / 'static'
-STATICFILES_DIRS = [STATIC_DIR]
-
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REDIS settings
@@ -127,5 +103,3 @@ CELERY_TIMEZONE = TIME_ZONE
 
 # mailing settings
 EMPTY_FILTERS_IN_MAILING_TO_ALL_CLIENTS = True
-
-
