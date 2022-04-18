@@ -50,7 +50,7 @@ class Client(models.Model):
     TZ = tuple(zip(all_timezones, all_timezones))
     default_tz = 'Europe/Moscow'
 
-    phone_number = models.IntegerField(unique=True)
+    phone_number = models.PositiveBigIntegerField(unique=True)
     operator_code = models.ForeignKey(OperatorCode, on_delete=models.SET_NULL, null=True, blank=True)
     tag = models.ForeignKey(ClientTag, on_delete=models.SET_NULL, null=True, blank=True)
 
