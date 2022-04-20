@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 with open(BASE_DIR / 'secrets.json', 'rt') as s:
     secrets = json.load(s)
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "77.223.97.240"]  # изменить соответственно ip сервера
 
